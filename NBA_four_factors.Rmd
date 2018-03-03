@@ -515,3 +515,734 @@ print(paste("Defense Turnovers Slope Significance", mean(NewFactorsPlayoffModelD
 
 ``` 
 
+```{r}
+#Read Data
+
+team_stats <- read.csv("team_stats.csv", header = TRUE)
+team_stats$Team <- as.character(team_stats$Team)
+```
+
+```{r}
+#Fitting models to original data
+
+offensive_four_factors <- lm(ORtg ~ O_eFG_Percent + O_TOV_Percent  + ORB_Percent + O_FT_Per_100_FGA, data = team_stats)
+defensive_four_factors <- lm(DRtg ~ D_eFG_Percent + D_TOV_Percent  + DRB_Percent + D_FT_Per_100_FGA, data = team_stats)
+
+summary(offensive_four_factors)
+summary(defensive_four_factors)
+```
+
+
+```{r}
+# Offensive Regression Model Bootstrapping
+
+#Drawing bootstrap samples
+B <- 1000
+bootstrap_offensive_coeff_reps <- matrix(rep(0,B*4), nrow = B, ncol = 4)
+bootstrap_offensive_coeff_reps_sd <- matrix(rep(0, B*4), nrow = B, ncol = 4)
+
+set.seed(1)
+for (i in 1:B) {
+  boot.sample <- team_stats[sample(nrow(team_stats), 150, replace = TRUE), ] #Create boot sample of size 150
+  boot_offensive_four_factors <- lm(ORtg ~ O_eFG_Percent + O_TOV_Percent  + ORB_Percent + O_FT_Per_100_FGA, data = boot.sample) #Evaluating bootstrap replications
+  boot.sample_coeff_rep <- as.numeric(boot_offensive_four_factors$coefficients)[2:5]
+  bootstrap_offensive_coeff_reps[i,] <- boot.sample_coeff_rep 
+  bootstrap_offensive_coeff_reps_sd[i,] <-as.numeric(coef(summary(boot_offensive_four_factors))[2:5, 2])
+}
+```
+
+```{r}
+#Standard Error for bootstrap replication coefficients of offensive model (Chapter 2 Slide 9/10)
+
+offensive_shooting_seB <- sd(bootstrap_offensive_coeff_reps[,1])
+offensive_turnovers_seB <- sd(bootstrap_offensive_coeff_reps[,2])
+offensive_rebounding_seB <- sd(bootstrap_offensive_coeff_reps[,3])
+offensive_free_throw_seB <- sd(bootstrap_offensive_coeff_reps[,4])
+
+print(offensive_shooting_seB)
+print(offensive_turnovers_seB)
+print(offensive_rebounding_seB)
+print(offensive_free_throw_seB)
+
+```
+
+```{r}
+#Default confidence intervals for offensive four factors
+confint(offensive_four_factors, level = .95)
+```
+
+```{r}
+#Construct bootstrap-t interval offensive four factors
+boot.offensive.shooting.pivot.approx <- (bootstrap_offensive_coeff_reps[,1] - offensive_four_factors$coefficients[2]) / bootstrap_offensive_coeff_reps_sd[,1]
+boot.offensive.shooting.that.low <- quantile(boot.offensive.shooting.pivot.approx, 1 - alpha)
+boot.offensive.shooting.that.high <- quantile(boot.offensive.shooting.pivot.approx, alpha)
+offensive.shooting.boot.t.confint.low <- offensive_four_factors$coefficients[2] - boot.offensive.shooting.that.low * coef(summary(boot_offensive_four_factors))[2, 2]
+offensive.shooting.boot.t.confint.high <- offensive_four_factors$coefficients[2] - boot.offensive.shooting.that.high * coef(summary(boot_offensive_four_factors))[2, 2]
+print(offensive.shooting.boot.t.confint.low)
+print(offensive.shooting.boot.t.confint.high)
+
+boot.offensive.turnover.pivot.approx <- (bootstrap_offensive_coeff_reps[,2] - offensive_four_factors$coefficients[3]) / bootstrap_offensive_coeff_reps_sd[,2]
+boot.offensive.turnover.that.low <- quantile(boot.offensive.turnover.pivot.approx, 1 - alpha)
+boot.offensive.turnover.that.high <- quantile(boot.offensive.turnover.pivot.approx, alpha)
+offensive.turnover.boot.t.confint.low <- offensive_four_factors$coefficients[3] - boot.offensive.turnover.that.low * coef(summary(boot_offensive_four_factors))[3, 2]
+offensive.turnover.boot.t.confint.high <- offensive_four_factors$coefficients[3] - boot.offensive.turnover.that.high * coef(summary(boot_offensive_four_factors))[3, 2]
+print(offensive.turnover.boot.t.confint.low)
+print(offensive.turnover.boot.t.confint.high)
+
+boot.offensive.rebounding.pivot.approx <- (bootstrap_offensive_coeff_reps[,3] - offensive_four_factors$coefficients[4]) / bootstrap_offensive_coeff_reps_sd[,3]
+boot.offensive.rebounding.that.low <- quantile(boot.offensive.rebounding.pivot.approx, 1 - alpha)
+boot.offensive.rebounding.that.high <- quantile(boot.offensive.rebounding.pivot.approx, alpha)
+offensive.rebounding.boot.t.confint.low <- offensive_four_factors$coefficients[4] - boot.offensive.rebounding.that.low * coef(summary(boot_offensive_four_factors))[4, 2]
+offensive.rebounding.boot.t.confint.high <- offensive_four_factors$coefficients[4] - boot.offensive.rebounding.that.high * coef(summary(boot_offensive_four_factors))[4, 2]
+print(offensive.rebounding.boot.t.confint.low)
+print(offensive.rebounding.boot.t.confint.high)
+
+boot.offensive.free.throw.pivot.approx <- (bootstrap_offensive_coeff_reps[,4] - offensive_four_factors$coefficients[5]) / bootstrap_offensive_coeff_reps_sd[,4]
+boot.offensive.free.throw.that.low <- quantile(boot.offensive.free.throw.pivot.approx, 1 - alpha)
+boot.offensive.free.throw.that.high <- quantile(boot.offensive.free.throw.pivot.approx, alpha)
+offensive.free.throw.boot.t.confint.low <- offensive_four_factors$coefficients[5] - boot.offensive.free.throw.that.low * coef(summary(boot_offensive_four_factors))[5, 2]
+offensive.free.throw.boot.t.confint.high <- offensive_four_factors$coefficients[5] - boot.offensive.free.throw.that.high * coef(summary(boot_offensive_four_factors))[5, 2]
+print(offensive.free.throw.boot.t.confint.low)
+print(offensive.free.throw.boot.t.confint.high)
+```
+
+
+```{r}
+# Construct percentile intervals for offensive four factors (Chapter 5 Slide 9)
+
+alpha <- .025
+offensive_shooting_CI_low <- quantile(bootstrap_offensive_coeff_reps[,1], alpha)
+offensive_shooting_CI_high <- quantile(bootstrap_offensive_coeff_reps[,1], 1 - alpha)
+offensive_shooting_CI <- c(offensive_shooting_CI_low, offensive_shooting_CI_high)
+offensive_turnovers_CI_low <- quantile(bootstrap_offensive_coeff_reps[,2], alpha)
+offensive_turnovers_CI_high <- quantile(bootstrap_offensive_coeff_reps[,2], 1 - alpha)
+offensive_turnovers_CI <- c(offensive_turnovers_CI_low, offensive_turnovers_CI_high)
+offensive_rebounding_CI_low <- quantile(bootstrap_offensive_coeff_reps[,3], alpha)
+offensive_rebounding_CI_high <- quantile(bootstrap_offensive_coeff_reps[,3], 1 - alpha)
+offensive_rebounding_CI <- c(offensive_rebounding_CI_low, offensive_rebounding_CI_high)
+offensive_free_throw_CI_low <- quantile(bootstrap_offensive_coeff_reps[,4], alpha)
+offensive_free_throw_CI_high <- quantile(bootstrap_offensive_coeff_reps[,4], 1 - alpha) 
+offensive_free_throw_CI <- c(offensive_free_throw_CI_low, offensive_free_throw_CI_high)
+
+print(offensive_shooting_CI)
+print(offensive_turnovers_CI)
+print(offensive_rebounding_CI)
+print(offensive_free_throw_CI)
+```
+
+```{r}
+# Defensive Regression Model Bootstrapping
+
+#Drawing bootstrap samples
+B <- 1000
+bootstrap_defensive_coeff_reps <- matrix(rep(0,B*4), nrow = B, ncol = 4)
+bootstrap_defensive_coeff_reps_sd <- matrix(rep(0, B*4), nrow = B, ncol = 4)
+
+
+set.seed(1)
+for (i in 1:B) {
+  boot.sample <- team_stats[sample(nrow(team_stats), 150, replace = TRUE), ] #Create boot sample of size 150
+  boot_defensive_four_factors <- lm(DRtg ~ D_eFG_Percent + D_TOV_Percent  + DRB_Percent + D_FT_Per_100_FGA, data = boot.sample) #Evaluating bootstrap replications
+  boot.sample_coeff_rep <- as.numeric(boot_defensive_four_factors$coefficients)[2:5]
+  bootstrap_defensive_coeff_reps[i,] <- boot.sample_coeff_rep 
+  bootstrap_defensive_coeff_reps_sd[i,] <-as.numeric(coef(summary(boot_defensive_four_factors))[2:5, 2])
+}
+```
+
+```{r}
+#Standard Error of bootstrap replication coefficients for defensive model (Chapter 2 Slide 9/10)
+
+defensive_shooting_seB <- sd(bootstrap_defensive_coeff_reps[,1])
+defensive_turnovers_seB <- sd(bootstrap_defensive_coeff_reps[,2])
+defensive_rebounding_seB <- sd(bootstrap_defensive_coeff_reps[,3])
+defensive_free_throw_seB <- sd(bootstrap_defensive_coeff_reps[,4])
+
+print(defensive_shooting_seB)
+print(defensive_turnovers_seB)
+print(defensive_rebounding_seB)
+print(defensive_free_throw_seB)
+
+
+```
+
+```{r}
+#Default confidence intervals for defensive four factors
+confint(defensive_four_factors, level = .95)
+```
+
+```{r}
+# Construct percentile intervals for defensive four factors (Chapter 5 Slide 9)
+
+alpha <- .025
+defensive_shooting_CI_low <- quantile(bootstrap_defensive_coeff_reps[,1], alpha)
+defensive_shooting_CI_high <- quantile(bootstrap_defensive_coeff_reps[,1], 1 - alpha)
+defensive_shooting_CI <- c(defensive_shooting_CI_low, defensive_shooting_CI_high)
+defensive_turnovers_CI_low <- quantile(bootstrap_defensive_coeff_reps[,2], alpha)
+defensive_turnovers_CI_high <- quantile(bootstrap_defensive_coeff_reps[,2], 1 - alpha)
+defensive_turnovers_CI <- c(defensive_turnovers_CI_low, defensive_turnovers_CI_high)
+defensive_rebounding_CI_low <- quantile(bootstrap_defensive_coeff_reps[,3], alpha)
+defensive_rebounding_CI_high <- quantile(bootstrap_defensive_coeff_reps[,3], 1 - alpha)
+defensive_rebounding_CI <- c(defensive_rebounding_CI_low, defensive_rebounding_CI_high)
+defensive_free_throw_CI_low <- quantile(bootstrap_defensive_coeff_reps[,4], alpha)
+defensive_free_throw_CI_high <- quantile(bootstrap_defensive_coeff_reps[,4], 1 - alpha) 
+defensive_free_throw_CI <- c(defensive_free_throw_CI_low, defensive_free_throw_CI_high)
+
+print(defensive_shooting_CI)
+print(defensive_turnovers_CI)
+print(defensive_rebounding_CI)
+print(defensive_free_throw_CI)
+```
+
+```{r}
+#Construct bootstrap-t interval defensive four factors
+boot.defensive.shooting.pivot.approx <- (bootstrap_defensive_coeff_reps[,1] - defensive_four_factors$coefficients[2]) / bootstrap_defensive_coeff_reps_sd[,1]
+boot.defensive.shooting.that.low <- quantile(boot.defensive.shooting.pivot.approx, 1 - alpha)
+boot.defensive.shooting.that.high <- quantile(boot.defensive.shooting.pivot.approx, alpha)
+defensive.shooting.boot.t.confint.low <- defensive_four_factors$coefficients[2] - boot.defensive.shooting.that.low * coef(summary(boot_defensive_four_factors))[2, 2]
+defensive.shooting.boot.t.confint.high <- defensive_four_factors$coefficients[2] - boot.defensive.shooting.that.high * coef(summary(boot_defensive_four_factors))[2, 2]
+print(defensive.shooting.boot.t.confint.low)
+print(defensive.shooting.boot.t.confint.high)
+
+boot.defensive.turnover.pivot.approx <- (bootstrap_defensive_coeff_reps[,2] - defensive_four_factors$coefficients[3]) / bootstrap_defensive_coeff_reps_sd[,2]
+boot.defensive.turnover.that.low <- quantile(boot.defensive.turnover.pivot.approx, 1 - alpha)
+boot.defensive.turnover.that.high <- quantile(boot.defensive.turnover.pivot.approx, alpha)
+defensive.turnover.boot.t.confint.low <- defensive_four_factors$coefficients[3] - boot.defensive.turnover.that.low * coef(summary(boot_defensive_four_factors))[3, 2]
+defensive.turnover.boot.t.confint.high <- defensive_four_factors$coefficients[3] - boot.defensive.turnover.that.high * coef(summary(boot_defensive_four_factors))[3, 2]
+print(defensive.turnover.boot.t.confint.low)
+print(defensive.turnover.boot.t.confint.high)
+
+boot.defensive.rebounding.pivot.approx <- (bootstrap_defensive_coeff_reps[,3] - defensive_four_factors$coefficients[4]) / bootstrap_defensive_coeff_reps_sd[,3]
+boot.defensive.rebounding.that.low <- quantile(boot.defensive.rebounding.pivot.approx, 1 - alpha)
+boot.defensive.rebounding.that.high <- quantile(boot.defensive.rebounding.pivot.approx, alpha)
+defensive.rebounding.boot.t.confint.low <- defensive_four_factors$coefficients[4] - boot.defensive.rebounding.that.low * coef(summary(boot_defensive_four_factors))[4, 2]
+defensive.rebounding.boot.t.confint.high <- defensive_four_factors$coefficients[4] - boot.defensive.rebounding.that.high * coef(summary(boot_defensive_four_factors))[4, 2]
+print(defensive.rebounding.boot.t.confint.low)
+print(defensive.rebounding.boot.t.confint.high)
+
+boot.defensive.free.throw.pivot.approx <- (bootstrap_defensive_coeff_reps[,4] - defensive_four_factors$coefficients[5]) / bootstrap_defensive_coeff_reps_sd[,4]
+boot.defensive.free.throw.that.low <- quantile(boot.defensive.free.throw.pivot.approx, 1 - alpha)
+boot.defensive.free.throw.that.high <- quantile(boot.defensive.free.throw.pivot.approx, alpha)
+defensive.free.throw.boot.t.confint.low <- defensive_four_factors$coefficients[5] - boot.defensive.free.throw.that.low * coef(summary(boot_defensive_four_factors))[5, 2]
+defensive.free.throw.boot.t.confint.high <- defensive_four_factors$coefficients[5] - boot.defensive.free.throw.that.high * coef(summary(boot_defensive_four_factors))[5, 2]
+print(defensive.free.throw.boot.t.confint.low)
+print(defensive.free.throw.boot.t.confint.high)
+```
+
+```{r} 
+#Bootstrapping Per Season Offensive Models
+twelve_thirteen_stats <- team_stats[which(grepl("12-13", team_stats$Team)),]
+thirteen_fourteen_stats <- team_stats[which(grepl("13-14", team_stats$Team)),]
+fourteen_fifteen_stats <- team_stats[which(grepl("14-15", team_stats$Team)),]
+fifteen_sixteen_stats <- team_stats[which(grepl("15-16", team_stats$Team)),]
+sixteen_seventeen_stats <- team_stats[which(grepl("16-17", team_stats$Team)),]
+
+twelve.thirteen.bootstrap_offensive_coeff_reps <- matrix(rep(0,B*4), nrow = B, ncol = 4)
+thirteen.fourteen.bootstrap_offensive_coeff_reps <- matrix(rep(0,B*4), nrow = B, ncol = 4)
+fourteen.fifteen.bootstrap_offensive_coeff_reps <- matrix(rep(0,B*4), nrow = B, ncol = 4)
+fifteen.sixteen.bootstrap_offensive_coeff_reps <- matrix(rep(0,B*4), nrow = B, ncol = 4)
+sixteen.seventeen.bootstrap_offensive_coeff_reps <- matrix(rep(0,B*4), nrow = B, ncol = 4)
+
+for (i in 1:B) {
+  twelve.thirteen.boot.sample <- team_stats[sample(nrow(twelve_thirteen_stats), 30, replace = TRUE), ]
+  twelve.thirteen.boot_offensive_four_factors <- lm(ORtg ~ O_eFG_Percent + O_TOV_Percent  + ORB_Percent + O_FT_Per_100_FGA, data = twelve.thirteen.boot.sample) #Evaluating bootstrap replications
+  twelve.thirteen.boot.sample_coeff_rep <- as.numeric(twelve.thirteen.boot_offensive_four_factors$coefficients)[2:5]
+  twelve.thirteen.bootstrap_offensive_coeff_reps[i,] <- twelve.thirteen.boot.sample_coeff_rep
+  
+  thirteen.fourteen.boot.sample <- team_stats[sample(nrow(thirteen_fourteen_stats), 30, replace = TRUE), ]
+  thirteen.fourteen.boot_offensive_four_factors <- lm(ORtg ~ O_eFG_Percent + O_TOV_Percent  + ORB_Percent + O_FT_Per_100_FGA, data = thirteen.fourteen.boot.sample) #Evaluating bootstrap replications
+  thirteen.fourteen.boot.sample_coeff_rep <- as.numeric(thirteen.fourteen.boot_offensive_four_factors$coefficients)[2:5]
+  thirteen.fourteen.bootstrap_offensive_coeff_reps[i,] <- thirteen.fourteen.boot.sample_coeff_rep
+  
+  fourteen.fifteen.boot.sample <- team_stats[sample(nrow(fourteen_fifteen_stats), 30, replace = TRUE), ]
+  fourteen.fifteen.boot_offensive_four_factors <- lm(ORtg ~ O_eFG_Percent + O_TOV_Percent  + ORB_Percent + O_FT_Per_100_FGA, data = fourteen.fifteen.boot.sample) #Evaluating bootstrap replications
+  fourteen.fifteen.boot.sample_coeff_rep <- as.numeric(fourteen.fifteen.boot_offensive_four_factors$coefficients)[2:5]
+  fourteen.fifteen.bootstrap_offensive_coeff_reps[i,] <- fourteen.fifteen.boot.sample_coeff_rep
+  
+  fifteen.sixteen.boot.sample <- team_stats[sample(nrow(fifteen_sixteen_stats), 30, replace = TRUE), ]
+  fifteen.sixteen.boot_offensive_four_factors <- lm(ORtg ~ O_eFG_Percent + O_TOV_Percent  + ORB_Percent + O_FT_Per_100_FGA, data = fifteen.sixteen.boot.sample) #Evaluating bootstrap replications
+  fifteen.sixteen.boot.sample_coeff_rep <- as.numeric(fifteen.sixteen.boot_offensive_four_factors$coefficients)[2:5]
+  fifteen.sixteen.bootstrap_offensive_coeff_reps[i,] <- fifteen.sixteen.boot.sample_coeff_rep
+  
+  sixteen.seventeen.boot.sample <- team_stats[sample(nrow(sixteen_seventeen_stats), 30, replace = TRUE), ]
+  sixteen.seventeen.boot_offensive_four_factors <- lm(ORtg ~ O_eFG_Percent + O_TOV_Percent  + ORB_Percent + O_FT_Per_100_FGA, data = sixteen.seventeen.boot.sample) #Evaluating bootstrap replications
+  sixteen.seventeen.boot.sample_coeff_rep <- as.numeric(sixteen.seventeen.boot_offensive_four_factors$coefficients)[2:5]
+  sixteen.seventeen.bootstrap_offensive_coeff_reps[i,] <- sixteen.seventeen.boot.sample_coeff_rep
+}
+
+#Standard Errors/Confidence Intervals Per Season
+
+#twelve.thirteen
+
+twelve.thirteen.offensive_shooting_seB <- sd(twelve.thirteen.bootstrap_offensive_coeff_reps[,1])
+twelve.thirteen.offensive_turnovers_seB <- sd(twelve.thirteen.bootstrap_offensive_coeff_reps[,2])
+twelve.thirteen.offensive_rebounding_seB <- sd(twelve.thirteen.bootstrap_offensive_coeff_reps[,3])
+twelve.thirteen.offensive_free_throw_seB <- sd(bootstrap_offensive_coeff_reps[,4])
+
+print(twelve.thirteen.offensive_shooting_seB)
+print(twelve.thirteen.offensive_turnovers_seB)
+print(twelve.thirteen.offensive_rebounding_seB)
+print(twelve.thirteen.offensive_free_throw_seB)
+
+twelve.thirteen.offensive_shooting_CI_low <- quantile(twelve.thirteen.bootstrap_offensive_coeff_reps[,1], alpha)
+twelve.thirteen.offensive_shooting_CI_high <- quantile(twelve.thirteen.bootstrap_offensive_coeff_reps[,1], 1 - alpha)
+twelve.thirteen.offensive_shooting_CI <- c(twelve.thirteen.offensive_shooting_CI_low, twelve.thirteen.offensive_shooting_CI_high)
+twelve.thirteen.offensive_turnovers_CI_low <- quantile(twelve.thirteen.bootstrap_offensive_coeff_reps[,2], alpha)
+twelve.thirteen.offensive_turnovers_CI_high <- quantile(twelve.thirteen.bootstrap_offensive_coeff_reps[,2], 1 - alpha)
+twelve.thirteen.offensive_turnovers_CI <- c(twelve.thirteen.offensive_turnovers_CI_low, twelve.thirteen.offensive_turnovers_CI_high)
+twelve.thirteen.offensive_rebounding_CI_low <- quantile(twelve.thirteen.bootstrap_offensive_coeff_reps[,3], alpha)
+twelve.thirteen.offensive_rebounding_CI_high <- quantile(twelve.thirteen.bootstrap_offensive_coeff_reps[,3], 1 - alpha)
+twelve.thirteen.offensive_rebounding_CI <- c(twelve.thirteen.offensive_rebounding_CI_low, twelve.thirteen.offensive_rebounding_CI_high)
+twelve.thirteen.offensive_free_throw_CI_low <- quantile(twelve.thirteen.bootstrap_offensive_coeff_reps[,4], alpha)
+twelve.thirteen.offensive_free_throw_CI_high <- quantile(twelve.thirteen.bootstrap_offensive_coeff_reps[,4], 1 - alpha) 
+twelve.thirteen.offensive_free_throw_CI <- c(twelve.thirteen.offensive_free_throw_CI_low, twelve.thirteen.offensive_free_throw_CI_high)
+
+print(twelve.thirteen.offensive_shooting_CI)
+print(twelve.thirteen.offensive_turnovers_CI)
+print(twelve.thirteen.offensive_rebounding_CI)
+print(twelve.thirteen.offensive_free_throw_CI)
+
+#thirteen.fourteen
+
+thirteen.fourteen.offensive_shooting_seB <- sd(thirteen.fourteen.bootstrap_offensive_coeff_reps[,1])
+thirteen.fourteen.offensive_turnovers_seB <- sd(thirteen.fourteen.bootstrap_offensive_coeff_reps[,2])
+thirteen.fourteen.offensive_rebounding_seB <- sd(thirteen.fourteen.bootstrap_offensive_coeff_reps[,3])
+thirteen.fourteen.offensive_free_throw_seB <- sd(bootstrap_offensive_coeff_reps[,4])
+
+print(thirteen.fourteen.offensive_shooting_seB)
+print(thirteen.fourteen.offensive_turnovers_seB)
+print(thirteen.fourteen.offensive_rebounding_seB)
+print(thirteen.fourteen.offensive_free_throw_seB)
+
+thirteen.fourteen.offensive_shooting_CI_low <- quantile(thirteen.fourteen.bootstrap_offensive_coeff_reps[,1], alpha)
+thirteen.fourteen.offensive_shooting_CI_high <- quantile(thirteen.fourteen.bootstrap_offensive_coeff_reps[,1], 1 - alpha)
+thirteen.fourteen.offensive_shooting_CI <- c(thirteen.fourteen.offensive_shooting_CI_low, thirteen.fourteen.offensive_shooting_CI_high)
+thirteen.fourteen.offensive_turnovers_CI_low <- quantile(thirteen.fourteen.bootstrap_offensive_coeff_reps[,2], alpha)
+thirteen.fourteen.offensive_turnovers_CI_high <- quantile(thirteen.fourteen.bootstrap_offensive_coeff_reps[,2], 1 - alpha)
+thirteen.fourteen.offensive_turnovers_CI <- c(thirteen.fourteen.offensive_turnovers_CI_low, thirteen.fourteen.offensive_turnovers_CI_high)
+thirteen.fourteen.offensive_rebounding_CI_low <- quantile(thirteen.fourteen.bootstrap_offensive_coeff_reps[,3], alpha)
+thirteen.fourteen.offensive_rebounding_CI_high <- quantile(thirteen.fourteen.bootstrap_offensive_coeff_reps[,3], 1 - alpha)
+thirteen.fourteen.offensive_rebounding_CI <- c(thirteen.fourteen.offensive_rebounding_CI_low, thirteen.fourteen.offensive_rebounding_CI_high)
+thirteen.fourteen.offensive_free_throw_CI_low <- quantile(thirteen.fourteen.bootstrap_offensive_coeff_reps[,4], alpha)
+thirteen.fourteen.offensive_free_throw_CI_high <- quantile(thirteen.fourteen.bootstrap_offensive_coeff_reps[,4], 1 - alpha) 
+thirteen.fourteen.offensive_free_throw_CI <- c(thirteen.fourteen.offensive_free_throw_CI_low, thirteen.fourteen.offensive_free_throw_CI_high)
+
+print(thirteen.fourteen.offensive_shooting_CI)
+print(thirteen.fourteen.offensive_turnovers_CI)
+print(thirteen.fourteen.offensive_rebounding_CI)
+print(thirteen.fourteen.offensive_free_throw_CI)
+
+#fourteen.fifteen
+
+fourteen.fifteen.offensive_shooting_seB <- sd(fourteen.fifteen.bootstrap_offensive_coeff_reps[,1])
+fourteen.fifteen.offensive_turnovers_seB <- sd(fourteen.fifteen.bootstrap_offensive_coeff_reps[,2])
+fourteen.fifteen.offensive_rebounding_seB <- sd(fourteen.fifteen.bootstrap_offensive_coeff_reps[,3])
+fourteen.fifteen.offensive_free_throw_seB <- sd(bootstrap_offensive_coeff_reps[,4])
+
+print(fourteen.fifteen.offensive_shooting_seB)
+print(fourteen.fifteen.offensive_turnovers_seB)
+print(fourteen.fifteen.offensive_rebounding_seB)
+print(fourteen.fifteen.offensive_free_throw_seB)
+
+fourteen.fifteen.offensive_shooting_CI_low <- quantile(fourteen.fifteen.bootstrap_offensive_coeff_reps[,1], alpha)
+fourteen.fifteen.offensive_shooting_CI_high <- quantile(fourteen.fifteen.bootstrap_offensive_coeff_reps[,1], 1 - alpha)
+fourteen.fifteen.offensive_shooting_CI <- c(fourteen.fifteen.offensive_shooting_CI_low, fourteen.fifteen.offensive_shooting_CI_high)
+fourteen.fifteen.offensive_turnovers_CI_low <- quantile(fourteen.fifteen.bootstrap_offensive_coeff_reps[,2], alpha)
+fourteen.fifteen.offensive_turnovers_CI_high <- quantile(fourteen.fifteen.bootstrap_offensive_coeff_reps[,2], 1 - alpha)
+fourteen.fifteen.offensive_turnovers_CI <- c(fourteen.fifteen.offensive_turnovers_CI_low, fourteen.fifteen.offensive_turnovers_CI_high)
+fourteen.fifteen.offensive_rebounding_CI_low <- quantile(fourteen.fifteen.bootstrap_offensive_coeff_reps[,3], alpha)
+fourteen.fifteen.offensive_rebounding_CI_high <- quantile(fourteen.fifteen.bootstrap_offensive_coeff_reps[,3], 1 - alpha)
+fourteen.fifteen.offensive_rebounding_CI <- c(fourteen.fifteen.offensive_rebounding_CI_low, fourteen.fifteen.offensive_rebounding_CI_high)
+fourteen.fifteen.offensive_free_throw_CI_low <- quantile(fourteen.fifteen.bootstrap_offensive_coeff_reps[,4], alpha)
+fourteen.fifteen.offensive_free_throw_CI_high <- quantile(fourteen.fifteen.bootstrap_offensive_coeff_reps[,4], 1 - alpha) 
+fourteen.fifteen.offensive_free_throw_CI <- c(fourteen.fifteen.offensive_free_throw_CI_low, fourteen.fifteen.offensive_free_throw_CI_high)
+
+print(fourteen.fifteen.offensive_shooting_CI)
+print(fourteen.fifteen.offensive_turnovers_CI)
+print(fourteen.fifteen.offensive_rebounding_CI)
+print(fourteen.fifteen.offensive_free_throw_CI)
+
+#fifteen.sixteen
+
+fifteen.sixteen.offensive_shooting_seB <- sd(fifteen.sixteen.bootstrap_offensive_coeff_reps[,1])
+fifteen.sixteen.offensive_turnovers_seB <- sd(fifteen.sixteen.bootstrap_offensive_coeff_reps[,2])
+fifteen.sixteen.offensive_rebounding_seB <- sd(fifteen.sixteen.bootstrap_offensive_coeff_reps[,3])
+fifteen.sixteen.offensive_free_throw_seB <- sd(bootstrap_offensive_coeff_reps[,4])
+
+print(fifteen.sixteen.offensive_shooting_seB)
+print(fifteen.sixteen.offensive_turnovers_seB)
+print(fifteen.sixteen.offensive_rebounding_seB)
+print(fifteen.sixteen.offensive_free_throw_seB)
+
+fifteen.sixteen.offensive_shooting_CI_low <- quantile(fifteen.sixteen.bootstrap_offensive_coeff_reps[,1], alpha)
+fifteen.sixteen.offensive_shooting_CI_high <- quantile(fifteen.sixteen.bootstrap_offensive_coeff_reps[,1], 1 - alpha)
+fifteen.sixteen.offensive_shooting_CI <- c(fifteen.sixteen.offensive_shooting_CI_low, fifteen.sixteen.offensive_shooting_CI_high)
+fifteen.sixteen.offensive_turnovers_CI_low <- quantile(fifteen.sixteen.bootstrap_offensive_coeff_reps[,2], alpha)
+fifteen.sixteen.offensive_turnovers_CI_high <- quantile(fifteen.sixteen.bootstrap_offensive_coeff_reps[,2], 1 - alpha)
+fifteen.sixteen.offensive_turnovers_CI <- c(fifteen.sixteen.offensive_turnovers_CI_low, fifteen.sixteen.offensive_turnovers_CI_high)
+fifteen.sixteen.offensive_rebounding_CI_low <- quantile(fifteen.sixteen.bootstrap_offensive_coeff_reps[,3], alpha)
+fifteen.sixteen.offensive_rebounding_CI_high <- quantile(fifteen.sixteen.bootstrap_offensive_coeff_reps[,3], 1 - alpha)
+fifteen.sixteen.offensive_rebounding_CI <- c(fifteen.sixteen.offensive_rebounding_CI_low, fifteen.sixteen.offensive_rebounding_CI_high)
+fifteen.sixteen.offensive_free_throw_CI_low <- quantile(fifteen.sixteen.bootstrap_offensive_coeff_reps[,4], alpha)
+fifteen.sixteen.offensive_free_throw_CI_high <- quantile(fifteen.sixteen.bootstrap_offensive_coeff_reps[,4], 1 - alpha) 
+fifteen.sixteen.offensive_free_throw_CI <- c(fifteen.sixteen.offensive_free_throw_CI_low, fifteen.sixteen.offensive_free_throw_CI_high)
+
+print(fifteen.sixteen.offensive_shooting_CI)
+print(fifteen.sixteen.offensive_turnovers_CI)
+print(fifteen.sixteen.offensive_rebounding_CI)
+print(fifteen.sixteen.offensive_free_throw_CI)
+
+#sixteen.seventeen
+
+sixteen.seventeen.offensive_shooting_seB <- sd(sixteen.seventeen.bootstrap_offensive_coeff_reps[,1])
+sixteen.seventeen.offensive_turnovers_seB <- sd(sixteen.seventeen.bootstrap_offensive_coeff_reps[,2])
+sixteen.seventeen.offensive_rebounding_seB <- sd(sixteen.seventeen.bootstrap_offensive_coeff_reps[,3])
+sixteen.seventeen.offensive_free_throw_seB <- sd(bootstrap_offensive_coeff_reps[,4])
+
+print(sixteen.seventeen.offensive_shooting_seB)
+print(sixteen.seventeen.offensive_turnovers_seB)
+print(sixteen.seventeen.offensive_rebounding_seB)
+print(sixteen.seventeen.offensive_free_throw_seB)
+
+sixteen.seventeen.offensive_shooting_CI_low <- quantile(sixteen.seventeen.bootstrap_offensive_coeff_reps[,1], alpha)
+sixteen.seventeen.offensive_shooting_CI_high <- quantile(sixteen.seventeen.bootstrap_offensive_coeff_reps[,1], 1 - alpha)
+sixteen.seventeen.offensive_shooting_CI <- c(sixteen.seventeen.offensive_shooting_CI_low, sixteen.seventeen.offensive_shooting_CI_high)
+sixteen.seventeen.offensive_turnovers_CI_low <- quantile(sixteen.seventeen.bootstrap_offensive_coeff_reps[,2], alpha)
+sixteen.seventeen.offensive_turnovers_CI_high <- quantile(sixteen.seventeen.bootstrap_offensive_coeff_reps[,2], 1 - alpha)
+sixteen.seventeen.offensive_turnovers_CI <- c(sixteen.seventeen.offensive_turnovers_CI_low, sixteen.seventeen.offensive_turnovers_CI_high)
+sixteen.seventeen.offensive_rebounding_CI_low <- quantile(sixteen.seventeen.bootstrap_offensive_coeff_reps[,3], alpha)
+sixteen.seventeen.offensive_rebounding_CI_high <- quantile(sixteen.seventeen.bootstrap_offensive_coeff_reps[,3], 1 - alpha)
+sixteen.seventeen.offensive_rebounding_CI <- c(sixteen.seventeen.offensive_rebounding_CI_low, sixteen.seventeen.offensive_rebounding_CI_high)
+sixteen.seventeen.offensive_free_throw_CI_low <- quantile(sixteen.seventeen.bootstrap_offensive_coeff_reps[,4], alpha)
+sixteen.seventeen.offensive_free_throw_CI_high <- quantile(sixteen.seventeen.bootstrap_offensive_coeff_reps[,4], 1 - alpha) 
+sixteen.seventeen.offensive_free_throw_CI <- c(sixteen.seventeen.offensive_free_throw_CI_low, sixteen.seventeen.offensive_free_throw_CI_high)
+
+print(sixteen.seventeen.offensive_shooting_CI)
+print(sixteen.seventeen.offensive_turnovers_CI)
+print(sixteen.seventeen.offensive_rebounding_CI)
+print(sixteen.seventeen.offensive_free_throw_CI)
+```
+
+```{r}
+#Boostrapping defensive models per season
+
+twelve.thirteen.bootstrap_defensive_coeff_reps <- matrix(rep(0,B*4), nrow = B, ncol = 4)
+thirteen.fourteen.bootstrap_defensive_coeff_reps <- matrix(rep(0,B*4), nrow = B, ncol = 4)
+fourteen.fifteen.bootstrap_defensive_coeff_reps <- matrix(rep(0,B*4), nrow = B, ncol = 4)
+fifteen.sixteen.bootstrap_defensive_coeff_reps <- matrix(rep(0,B*4), nrow = B, ncol = 4)
+sixteen.seventeen.bootstrap_defensive_coeff_reps <- matrix(rep(0,B*4), nrow = B, ncol = 4)
+
+for (i in 1:B) {
+  twelve.thirteen.boot.sample <- team_stats[sample(nrow(twelve_thirteen_stats), 30, replace = TRUE), ]
+  twelve.thirteen.boot_defensive_four_factors <- lm(DRtg ~ D_eFG_Percent + D_TOV_Percent  + DRB_Percent + D_FT_Per_100_FGA, data = twelve.thirteen.boot.sample) #Evaluating bootstrap replications
+  twelve.thirteen.boot.sample_coeff_rep <- as.numeric(twelve.thirteen.boot_defensive_four_factors$coefficients)[2:5]
+  twelve.thirteen.bootstrap_defensive_coeff_reps[i,] <- twelve.thirteen.boot.sample_coeff_rep
+  
+  thirteen.fourteen.boot.sample <- team_stats[sample(nrow(thirteen_fourteen_stats), 30, replace = TRUE), ]
+  thirteen.fourteen.boot_defensive_four_factors <- lm(DRtg ~ D_eFG_Percent + D_TOV_Percent  + DRB_Percent + D_FT_Per_100_FGA, data = thirteen.fourteen.boot.sample) #Evaluating bootstrap replications
+  thirteen.fourteen.boot.sample_coeff_rep <- as.numeric(thirteen.fourteen.boot_defensive_four_factors$coefficients)[2:5]
+  thirteen.fourteen.bootstrap_defensive_coeff_reps[i,] <- thirteen.fourteen.boot.sample_coeff_rep
+  
+  fourteen.fifteen.boot.sample <- team_stats[sample(nrow(fourteen_fifteen_stats), 30, replace = TRUE), ]
+  fourteen.fifteen.boot_defensive_four_factors <- lm(DRtg ~ D_eFG_Percent + D_TOV_Percent  + DRB_Percent + D_FT_Per_100_FGA, data = fourteen.fifteen.boot.sample) #Evaluating bootstrap replications
+  fourteen.fifteen.boot.sample_coeff_rep <- as.numeric(fourteen.fifteen.boot_defensive_four_factors$coefficients)[2:5]
+  fourteen.fifteen.bootstrap_defensive_coeff_reps[i,] <- fourteen.fifteen.boot.sample_coeff_rep
+  
+  fifteen.sixteen.boot.sample <- team_stats[sample(nrow(fifteen_sixteen_stats), 30, replace = TRUE), ]
+  fifteen.sixteen.boot_defensive_four_factors <- lm(DRtg ~ D_eFG_Percent + D_TOV_Percent  + DRB_Percent + D_FT_Per_100_FGA, data = fifteen.sixteen.boot.sample) #Evaluating bootstrap replications
+  fifteen.sixteen.boot.sample_coeff_rep <- as.numeric(fifteen.sixteen.boot_defensive_four_factors$coefficients)[2:5]
+  fifteen.sixteen.bootstrap_defensive_coeff_reps[i,] <- fifteen.sixteen.boot.sample_coeff_rep
+  
+  sixteen.seventeen.boot.sample <- team_stats[sample(nrow(sixteen_seventeen_stats), 30, replace = TRUE), ]
+  sixteen.seventeen.boot_defensive_four_factors <- lm(DRtg ~ D_eFG_Percent + D_TOV_Percent  + DRB_Percent + D_FT_Per_100_FGA, data = sixteen.seventeen.boot.sample) #Evaluating bootstrap replications
+  sixteen.seventeen.boot.sample_coeff_rep <- as.numeric(sixteen.seventeen.boot_defensive_four_factors$coefficients)[2:5]
+  sixteen.seventeen.bootstrap_defensive_coeff_reps[i,] <- sixteen.seventeen.boot.sample_coeff_rep
+}
+
+#Standard Errors/Confidence Intervals Per Season
+
+#twelve.thirteen
+
+twelve.thirteen.defensive_shooting_seB <- sd(twelve.thirteen.bootstrap_defensive_coeff_reps[,1])
+twelve.thirteen.defensive_turnovers_seB <- sd(twelve.thirteen.bootstrap_defensive_coeff_reps[,2])
+twelve.thirteen.defensive_rebounding_seB <- sd(twelve.thirteen.bootstrap_defensive_coeff_reps[,3])
+twelve.thirteen.defensive_free_throw_seB <- sd(bootstrap_defensive_coeff_reps[,4])
+
+print(twelve.thirteen.defensive_shooting_seB)
+print(twelve.thirteen.defensive_turnovers_seB)
+print(twelve.thirteen.defensive_rebounding_seB)
+print(twelve.thirteen.defensive_free_throw_seB)
+
+twelve.thirteen.defensive_shooting_CI_low <- quantile(twelve.thirteen.bootstrap_defensive_coeff_reps[,1], alpha)
+twelve.thirteen.defensive_shooting_CI_high <- quantile(twelve.thirteen.bootstrap_defensive_coeff_reps[,1], 1 - alpha)
+twelve.thirteen.defensive_shooting_CI <- c(twelve.thirteen.defensive_shooting_CI_low, twelve.thirteen.defensive_shooting_CI_high)
+twelve.thirteen.defensive_turnovers_CI_low <- quantile(twelve.thirteen.bootstrap_defensive_coeff_reps[,2], alpha)
+twelve.thirteen.defensive_turnovers_CI_high <- quantile(twelve.thirteen.bootstrap_defensive_coeff_reps[,2], 1 - alpha)
+twelve.thirteen.defensive_turnovers_CI <- c(twelve.thirteen.defensive_turnovers_CI_low, twelve.thirteen.defensive_turnovers_CI_high)
+twelve.thirteen.defensive_rebounding_CI_low <- quantile(twelve.thirteen.bootstrap_defensive_coeff_reps[,3], alpha)
+twelve.thirteen.defensive_rebounding_CI_high <- quantile(twelve.thirteen.bootstrap_defensive_coeff_reps[,3], 1 - alpha)
+twelve.thirteen.defensive_rebounding_CI <- c(twelve.thirteen.defensive_rebounding_CI_low, twelve.thirteen.defensive_rebounding_CI_high)
+twelve.thirteen.defensive_free_throw_CI_low <- quantile(twelve.thirteen.bootstrap_defensive_coeff_reps[,4], alpha)
+twelve.thirteen.defensive_free_throw_CI_high <- quantile(twelve.thirteen.bootstrap_defensive_coeff_reps[,4], 1 - alpha) 
+twelve.thirteen.defensive_free_throw_CI <- c(twelve.thirteen.defensive_free_throw_CI_low, twelve.thirteen.defensive_free_throw_CI_high)
+
+print(twelve.thirteen.defensive_shooting_CI)
+print(twelve.thirteen.defensive_turnovers_CI)
+print(twelve.thirteen.defensive_rebounding_CI)
+print(twelve.thirteen.defensive_free_throw_CI)
+
+#thirteen.fourteen
+
+thirteen.fourteen.defensive_shooting_seB <- sd(thirteen.fourteen.bootstrap_defensive_coeff_reps[,1])
+thirteen.fourteen.defensive_turnovers_seB <- sd(thirteen.fourteen.bootstrap_defensive_coeff_reps[,2])
+thirteen.fourteen.defensive_rebounding_seB <- sd(thirteen.fourteen.bootstrap_defensive_coeff_reps[,3])
+thirteen.fourteen.defensive_free_throw_seB <- sd(bootstrap_defensive_coeff_reps[,4])
+
+print(thirteen.fourteen.defensive_shooting_seB)
+print(thirteen.fourteen.defensive_turnovers_seB)
+print(thirteen.fourteen.defensive_rebounding_seB)
+print(thirteen.fourteen.defensive_free_throw_seB)
+
+thirteen.fourteen.defensive_shooting_CI_low <- quantile(thirteen.fourteen.bootstrap_defensive_coeff_reps[,1], alpha)
+thirteen.fourteen.defensive_shooting_CI_high <- quantile(thirteen.fourteen.bootstrap_defensive_coeff_reps[,1], 1 - alpha)
+thirteen.fourteen.defensive_shooting_CI <- c(thirteen.fourteen.defensive_shooting_CI_low, thirteen.fourteen.defensive_shooting_CI_high)
+thirteen.fourteen.defensive_turnovers_CI_low <- quantile(thirteen.fourteen.bootstrap_defensive_coeff_reps[,2], alpha)
+thirteen.fourteen.defensive_turnovers_CI_high <- quantile(thirteen.fourteen.bootstrap_defensive_coeff_reps[,2], 1 - alpha)
+thirteen.fourteen.defensive_turnovers_CI <- c(thirteen.fourteen.defensive_turnovers_CI_low, thirteen.fourteen.defensive_turnovers_CI_high)
+thirteen.fourteen.defensive_rebounding_CI_low <- quantile(thirteen.fourteen.bootstrap_defensive_coeff_reps[,3], alpha)
+thirteen.fourteen.defensive_rebounding_CI_high <- quantile(thirteen.fourteen.bootstrap_defensive_coeff_reps[,3], 1 - alpha)
+thirteen.fourteen.defensive_rebounding_CI <- c(thirteen.fourteen.defensive_rebounding_CI_low, thirteen.fourteen.defensive_rebounding_CI_high)
+thirteen.fourteen.defensive_free_throw_CI_low <- quantile(thirteen.fourteen.bootstrap_defensive_coeff_reps[,4], alpha)
+thirteen.fourteen.defensive_free_throw_CI_high <- quantile(thirteen.fourteen.bootstrap_defensive_coeff_reps[,4], 1 - alpha) 
+thirteen.fourteen.defensive_free_throw_CI <- c(thirteen.fourteen.defensive_free_throw_CI_low, thirteen.fourteen.defensive_free_throw_CI_high)
+
+print(thirteen.fourteen.defensive_shooting_CI)
+print(thirteen.fourteen.defensive_turnovers_CI)
+print(thirteen.fourteen.defensive_rebounding_CI)
+print(thirteen.fourteen.defensive_free_throw_CI)
+
+#fourteen.fifteen
+
+fourteen.fifteen.defensive_shooting_seB <- sd(fourteen.fifteen.bootstrap_defensive_coeff_reps[,1])
+fourteen.fifteen.defensive_turnovers_seB <- sd(fourteen.fifteen.bootstrap_defensive_coeff_reps[,2])
+fourteen.fifteen.defensive_rebounding_seB <- sd(fourteen.fifteen.bootstrap_defensive_coeff_reps[,3])
+fourteen.fifteen.defensive_free_throw_seB <- sd(bootstrap_defensive_coeff_reps[,4])
+
+print(fourteen.fifteen.defensive_shooting_seB)
+print(fourteen.fifteen.defensive_turnovers_seB)
+print(fourteen.fifteen.defensive_rebounding_seB)
+print(fourteen.fifteen.defensive_free_throw_seB)
+
+fourteen.fifteen.defensive_shooting_CI_low <- quantile(fourteen.fifteen.bootstrap_defensive_coeff_reps[,1], alpha)
+fourteen.fifteen.defensive_shooting_CI_high <- quantile(fourteen.fifteen.bootstrap_defensive_coeff_reps[,1], 1 - alpha)
+fourteen.fifteen.defensive_shooting_CI <- c(fourteen.fifteen.defensive_shooting_CI_low, fourteen.fifteen.defensive_shooting_CI_high)
+fourteen.fifteen.defensive_turnovers_CI_low <- quantile(fourteen.fifteen.bootstrap_defensive_coeff_reps[,2], alpha)
+fourteen.fifteen.defensive_turnovers_CI_high <- quantile(fourteen.fifteen.bootstrap_defensive_coeff_reps[,2], 1 - alpha)
+fourteen.fifteen.defensive_turnovers_CI <- c(fourteen.fifteen.defensive_turnovers_CI_low, fourteen.fifteen.defensive_turnovers_CI_high)
+fourteen.fifteen.defensive_rebounding_CI_low <- quantile(fourteen.fifteen.bootstrap_defensive_coeff_reps[,3], alpha)
+fourteen.fifteen.defensive_rebounding_CI_high <- quantile(fourteen.fifteen.bootstrap_defensive_coeff_reps[,3], 1 - alpha)
+fourteen.fifteen.defensive_rebounding_CI <- c(fourteen.fifteen.defensive_rebounding_CI_low, fourteen.fifteen.defensive_rebounding_CI_high)
+fourteen.fifteen.defensive_free_throw_CI_low <- quantile(fourteen.fifteen.bootstrap_defensive_coeff_reps[,4], alpha)
+fourteen.fifteen.defensive_free_throw_CI_high <- quantile(fourteen.fifteen.bootstrap_defensive_coeff_reps[,4], 1 - alpha) 
+fourteen.fifteen.defensive_free_throw_CI <- c(fourteen.fifteen.defensive_free_throw_CI_low, fourteen.fifteen.defensive_free_throw_CI_high)
+
+print(fourteen.fifteen.defensive_shooting_CI)
+print(fourteen.fifteen.defensive_turnovers_CI)
+print(fourteen.fifteen.defensive_rebounding_CI)
+print(fourteen.fifteen.defensive_free_throw_CI)
+
+#fifteen.sixteen
+
+fifteen.sixteen.defensive_shooting_seB <- sd(fifteen.sixteen.bootstrap_defensive_coeff_reps[,1])
+fifteen.sixteen.defensive_turnovers_seB <- sd(fifteen.sixteen.bootstrap_defensive_coeff_reps[,2])
+fifteen.sixteen.defensive_rebounding_seB <- sd(fifteen.sixteen.bootstrap_defensive_coeff_reps[,3])
+fifteen.sixteen.defensive_free_throw_seB <- sd(bootstrap_defensive_coeff_reps[,4])
+
+print(fifteen.sixteen.defensive_shooting_seB)
+print(fifteen.sixteen.defensive_turnovers_seB)
+print(fifteen.sixteen.defensive_rebounding_seB)
+print(fifteen.sixteen.defensive_free_throw_seB)
+
+fifteen.sixteen.defensive_shooting_CI_low <- quantile(fifteen.sixteen.bootstrap_defensive_coeff_reps[,1], alpha)
+fifteen.sixteen.defensive_shooting_CI_high <- quantile(fifteen.sixteen.bootstrap_defensive_coeff_reps[,1], 1 - alpha)
+fifteen.sixteen.defensive_shooting_CI <- c(fifteen.sixteen.defensive_shooting_CI_low, fifteen.sixteen.defensive_shooting_CI_high)
+fifteen.sixteen.defensive_turnovers_CI_low <- quantile(fifteen.sixteen.bootstrap_defensive_coeff_reps[,2], alpha)
+fifteen.sixteen.defensive_turnovers_CI_high <- quantile(fifteen.sixteen.bootstrap_defensive_coeff_reps[,2], 1 - alpha)
+fifteen.sixteen.defensive_turnovers_CI <- c(fifteen.sixteen.defensive_turnovers_CI_low, fifteen.sixteen.defensive_turnovers_CI_high)
+fifteen.sixteen.defensive_rebounding_CI_low <- quantile(fifteen.sixteen.bootstrap_defensive_coeff_reps[,3], alpha)
+fifteen.sixteen.defensive_rebounding_CI_high <- quantile(fifteen.sixteen.bootstrap_defensive_coeff_reps[,3], 1 - alpha)
+fifteen.sixteen.defensive_rebounding_CI <- c(fifteen.sixteen.defensive_rebounding_CI_low, fifteen.sixteen.defensive_rebounding_CI_high)
+fifteen.sixteen.defensive_free_throw_CI_low <- quantile(fifteen.sixteen.bootstrap_defensive_coeff_reps[,4], alpha)
+fifteen.sixteen.defensive_free_throw_CI_high <- quantile(fifteen.sixteen.bootstrap_defensive_coeff_reps[,4], 1 - alpha) 
+fifteen.sixteen.defensive_free_throw_CI <- c(fifteen.sixteen.defensive_free_throw_CI_low, fifteen.sixteen.defensive_free_throw_CI_high)
+
+print(fifteen.sixteen.defensive_shooting_CI)
+print(fifteen.sixteen.defensive_turnovers_CI)
+print(fifteen.sixteen.defensive_rebounding_CI)
+print(fifteen.sixteen.defensive_free_throw_CI)
+
+#sixteen.seventeen
+
+sixteen.seventeen.defensive_shooting_seB <- sd(sixteen.seventeen.bootstrap_defensive_coeff_reps[,1])
+sixteen.seventeen.defensive_turnovers_seB <- sd(sixteen.seventeen.bootstrap_defensive_coeff_reps[,2])
+sixteen.seventeen.defensive_rebounding_seB <- sd(sixteen.seventeen.bootstrap_defensive_coeff_reps[,3])
+sixteen.seventeen.defensive_free_throw_seB <- sd(bootstrap_defensive_coeff_reps[,4])
+
+print(sixteen.seventeen.defensive_shooting_seB)
+print(sixteen.seventeen.defensive_turnovers_seB)
+print(sixteen.seventeen.defensive_rebounding_seB)
+print(sixteen.seventeen.defensive_free_throw_seB)
+
+sixteen.seventeen.defensive_shooting_CI_low <- quantile(sixteen.seventeen.bootstrap_defensive_coeff_reps[,1], alpha)
+sixteen.seventeen.defensive_shooting_CI_high <- quantile(sixteen.seventeen.bootstrap_defensive_coeff_reps[,1], 1 - alpha)
+sixteen.seventeen.defensive_shooting_CI <- c(sixteen.seventeen.defensive_shooting_CI_low, sixteen.seventeen.defensive_shooting_CI_high)
+sixteen.seventeen.defensive_turnovers_CI_low <- quantile(sixteen.seventeen.bootstrap_defensive_coeff_reps[,2], alpha)
+sixteen.seventeen.defensive_turnovers_CI_high <- quantile(sixteen.seventeen.bootstrap_defensive_coeff_reps[,2], 1 - alpha)
+sixteen.seventeen.defensive_turnovers_CI <- c(sixteen.seventeen.defensive_turnovers_CI_low, sixteen.seventeen.defensive_turnovers_CI_high)
+sixteen.seventeen.defensive_rebounding_CI_low <- quantile(sixteen.seventeen.bootstrap_defensive_coeff_reps[,3], alpha)
+sixteen.seventeen.defensive_rebounding_CI_high <- quantile(sixteen.seventeen.bootstrap_defensive_coeff_reps[,3], 1 - alpha)
+sixteen.seventeen.defensive_rebounding_CI <- c(sixteen.seventeen.defensive_rebounding_CI_low, sixteen.seventeen.defensive_rebounding_CI_high)
+sixteen.seventeen.defensive_free_throw_CI_low <- quantile(sixteen.seventeen.bootstrap_defensive_coeff_reps[,4], alpha)
+sixteen.seventeen.defensive_free_throw_CI_high <- quantile(sixteen.seventeen.bootstrap_defensive_coeff_reps[,4], 1 - alpha) 
+sixteen.seventeen.defensive_free_throw_CI <- c(sixteen.seventeen.defensive_free_throw_CI_low, sixteen.seventeen.defensive_free_throw_CI_high)
+
+print(sixteen.seventeen.defensive_shooting_CI)
+print(sixteen.seventeen.defensive_turnovers_CI)
+print(sixteen.seventeen.defensive_rebounding_CI)
+print(sixteen.seventeen.defensive_free_throw_CI)
+```
+
+
+```{r}
+#Correlation Boostrapping
+B <- 2000
+set.seed(1)
+for (i in 1:B) {
+  team_number <- sample(1:30, 1)
+  if (team_number == 1) { #Atlanta Hawks
+    boot.sample <- team_stats[which(grepl("Atlanta Hawks", team_stats$Team, fixed = TRUE)), ]
+  }
+  
+  else if (team_number == 2) { #Boston Celtics
+    boot.sample <- team_stats[which(grepl("Boston Celtics", team_stats$Team, fixed = TRUE)), ]
+  }
+  
+  else if (team_number == 3) { #Brooklyn Nets
+    boot.sample <- team_stats[which(grepl("Brooklyn Nets", team_stats$Team, fixed = TRUE)), ]
+  }
+  
+  else if (team_number == 4) { #Charlotte Bobcats/Charlotte Hornets
+    boot.sample <- team_stats[which(grepl("Charlotte Bobcats", team_stats$Team, fixed = TRUE) | grepl("Charlotte Hornets", team_stats$Team, fixed = TRUE)), ]
+  }
+  
+  else if (team_number == 5) { #Chicago Bulls
+    boot.sample <- team_stats[which(grepl("Chicago Bulls", team_stats$Team, fixed = TRUE)), ]
+  }
+  
+  else if (team_number == 6) { #Cleveland Cavaliers
+    boot.sample <- team_stats[which(grepl("Cleveland Cavaliers", team_stats$Team, fixed = TRUE)), ]
+  }
+  
+  else if (team_number == 7) { #Dallas Mavericks
+    boot.sample <- team_stats[which(grepl("Dallas Mavericks", team_stats$Team, fixed = TRUE)), ]
+  }
+  
+  else if (team_number == 8) { #Denver Nuggets
+    boot.sample <- team_stats[which(grepl("Denver Nuggets", team_stats$Team, fixed = TRUE)), ]
+  }
+  
+  else if (team_number == 9) { #Detroit Pistons
+    boot.sample <- team_stats[which(grepl("Detroit Pistons", team_stats$Team, fixed = TRUE)), ]
+  }
+  
+  else if (team_number == 10) { #Golden State Warriors
+    boot.sample <- team_stats[which(grepl("Golden State Warriors", team_stats$Team, fixed = TRUE)), ]
+  }
+  
+  else if (team_number == 11) { #Houston Rockets
+    boot.sample <- team_stats[which(grepl("Houston Rockets", team_stats$Team, fixed = TRUE)), ]
+  }
+  
+  else if (team_number == 12) { #Indiana Pacers
+    boot.sample <- team_stats[which(grepl("Indiana Pacers", team_stats$Team, fixed = TRUE)), ]
+  }
+  
+  else if (team_number == 13) { #Los Angeles Clippers
+    boot.sample <- team_stats[which(grepl("Los Angeles Clippers", team_stats$Team, fixed = TRUE)), ]
+  }
+  
+  else if (team_number == 14) { #Los Angeles Lakers
+    boot.sample <- team_stats[which(grepl("Los Angeles Lakers", team_stats$Team, fixed = TRUE)), ]
+  }
+  
+  else if (team_number == 15) { #Memphis Grizzlies
+    boot.sample <- team_stats[which(grepl("Memphis Grizzlies", team_stats$Team, fixed = TRUE)), ]
+  }
+  
+  else if (team_number == 16) { #Miami Heat
+    boot.sample <- team_stats[which(grepl("Miami Heat", team_stats$Team, fixed = TRUE)), ]
+  }
+  
+  else if (team_number == 17) { #Milwaukee Bucks
+    boot.sample <- team_stats[which(grepl("Milwaukee Bucks", team_stats$Team, fixed = TRUE)), ]
+  }
+  
+  else if (team_number == 18) { #Minnesota Timberwolves
+    boot.sample <- team_stats[which(grepl("Minnesota Timberwolves", team_stats$Team, fixed = TRUE)), ]
+  }
+  
+  else if (team_number == 19) { #New Orleans Hornets/New Orleans Pelicans
+    boot.sample <- team_stats[which(grepl("New Orleans Hornets", team_stats$Team, fixed = TRUE) | grepl("New Orleans Pelicans", team_stats$Team, fixed = TRUE)), ]
+  }
+  
+  else if (team_number == 20) { #New York Knicks
+    boot.sample <- team_stats[which(grepl("New York Knicks", team_stats$Team, fixed = TRUE)), ]
+  }
+  
+  else if (team_number == 21) { #Oklahoma City Thunder
+    boot.sample <- team_stats[which(grepl("Oklahoma City Thunder", team_stats$Team, fixed = TRUE)), ]
+  }
+  
+  else if (team_number == 22) { #Orlando Magic
+    boot.sample <- team_stats[which(grepl("Orlando Magic", team_stats$Team, fixed = TRUE)), ]
+  }
+  
+  else if (team_number == 23) { #Philadelphia 76ers
+    boot.sample <- team_stats[which(grepl("Philadelphia 76ers", team_stats$Team, fixed = TRUE)), ]
+  }
+  
+  else if (team_number == 24) { #Phoenix Suns
+    boot.sample <- team_stats[which(grepl("Phoenix Suns", team_stats$Team, fixed = TRUE)), ]
+  }
+  
+  else if (team_number == 25) { #Portland Trail Blazers
+    boot.sample <- team_stats[which(grepl("Portland Trail Blazers", team_stats$Team, fixed = TRUE)), ]
+  }
+  
+  else if (team_number == 26) { #Sacramento Kings
+    boot.sample <- team_stats[which(grepl("Sacramento Kings", team_stats$Team, fixed = TRUE)), ]
+  }
+  
+  else if (team_number == 27) { #San Antonio Spurs
+    boot.sample <- team_stats[which(grepl("San Antonio Spurs", team_stats$Team, fixed = TRUE)), ]
+  }
+  
+  else if (team_number == 28) { #Toronto Raptors
+    boot.sample <- team_stats[which(grepl("Toronto Raptors", team_stats$Team, fixed = TRUE)), ]
+  }
+  
+  else if (team_number == 29) { #Utah Jazz
+    boot.sample <- team_stats[which(grepl("Utah Jazz", team_stats$Team, fixed = TRUE)), ]
+  }
+  
+  else if (team_number == 30) { #Washington Wizards
+    boot.sample <- team_stats[which(grepl("Washington Wizards", team_stats$Team, fixed = TRUE)), ]
+  }
+  
+  else {
+    stop()
+  }
+  
+  boot.sample.cov.matrix <- cov(boot.sample[, -c(1:2)])
+  boot.sample.cor.matrix <- cor(boot.sample[, -c(1:2)])
+}
+
