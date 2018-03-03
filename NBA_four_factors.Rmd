@@ -1,0 +1,517 @@
+---
+title: "NBA_four_factors"
+author: "Yi Hu"
+date: "3/3/2018"
+output: html_document
+---
+
+test on the probability of wins on age
+```{r}
+table(Age)
+
+plot(Age, PW)
+abline(lm(PW~Age))
+m1 <- lm(PW~Age)
+summary(m1)
+
+```
+
+Age ranges from 23.2 to 30.7；Based on the positive relationships between the age and the 
+
+```{r}
+library(car)
+qqPlot(m1)
+
+spreadLevelPlot(m1)
+crPlots(m1, span=0.7)
+
+ncvTest(m1)
+# do confidence interval of m1
+confint(m1)
+```
+
+ a test on the margin of victory (MOV) = points - opponent points
+```{r}
+m2 <- lm(PW~MOV)
+summary(m2)
+```
+cannot interpret anything with MOV. interrelated to each other!
+
+```{r}
+m3<- lm(PW~SOS)
+summary(m3)
+```
+SOS: strength of schedule; it may relate to players' physical strength significantly(assumption)
+SOS and PW has a negative correlation, with large variation
+
+SRS = MOV+SOS; therefore, it is closely related to PW because it contains the part of MOV. 
+```{r}
+m4 <- lm(PW~ORtg)
+summary(m4)
+
+m5 <- lm(PW~DRtg)
+summary(m5)
+
+m6 <- lm(PW~ORtg+DRtg)
+summary(m6)
+```
+
+
+```{r}
+m7 <- lm(PW~Pace)
+summary(m7)
+```
+It does not show significant evidence that Pace is influencial.
+
+
+```{r}
+plot (FTr, PW)
+m8 <- lm(PW~FTr)
+summary(m8)
+```
+
+3PAr: 三分命中 rate
+TS%:True Shooting Percentage
+Effective Field Goal Percentage   eFG
+O_TOV% 进攻失误 rate
+rb 篮板
+
+###mmp plots to show all the lowess lines
+
+###cross validation
+
+##check the overfitting
+Still run the AIC and BIC, just for calculations; showing that we have done the work
+
+- maybe I can work on the addictive model and nonaddictive model to whether there are combined effect
+
+- figure out how to do the categorical ... ones....
+//One categorical factor is whether the team is playing at its home field
+
+
+- also, for additional information, we have examined the Age, SOS and Pace related to the model
+//think about these factors as out-of-game factors; since they may relate to the four factors(correlation)
+//With both respective to O and to D
+
+```{r AIC/BIC test}
+offensive_ABIC <- cbind(AIC(offensive_four_factors), BIC(offensive_four_factors))
+defensive_ABIC <- cbind(AIC(defensive_four_factors), BIC(defensive_four_factors))
+offensive_ABIC
+defensive_ABIC
+```
+
+BIC has a harsher penalty; therefore, BIC generally has a larger number than AIC
+
+```{r regression on Age+Pace+SOS}
+#using the datasets of training
+offensive_others <- lm(ORtg~Age+Pace+SOS, data = training)
+summary(offensive_others)
+defensive_others <- lm(DRtg~Age+Pace+SOS, data = training)
+summary(defensive_others)
+
+#using the dataset of team_stats
+offensive_others2 <- lm(ORtg~Age+Pace+SOS, data = team_stats)
+summary(offensive_others2)
+defensive_others2 <- lm(DRtg~Age+Pace+SOS, data = team_stats)
+summary(defensive_others2)
+
+
+```
+
+```{r}
+
+offensive_others2_add <- lm(ORtg~Age+Pace+SOS+Age*Pace +Age*SOS +SOS*Pace, data = team_stats)
+summary(offensive_others2_add)
+defensive_others2_add <- lm(DRtg~Age+Pace+SOS+Age*SOS, data = team_stats)
+summary(defensive_others2_add)
+#little change on R^2, no relevancy
+
+```
+
+
+
+
+```{r addictive model on sos age and pace}
+#on sos
+offensive_sos_4factors_nonadd <- lm(ORtg ~`O_eFG%` + `O_TOV%`  + `ORB%` + `O_FT/FGA` + SOS_Cat*`O_eFG%` +SOS_Cat*`O_TOV%` + SOS_Cat*`ORB%` + SOS_Cat*`O_FT/FGA`, data = team_stats)
+summary(offensive_sos_4factors_nonadd)
+defensive_sos_4factors_nonadd <- lm(DRtg ~`D_eFG%` + `D_TOV%`  + `DRB%` + `D_FT/FGA` + SOS_Cat*`D_eFG%` +SOS_Cat*`D_TOV%` + SOS_Cat*`DRB%` + SOS_Cat*`D_FT/FGA`, data = team_stats)
+summary(defensive_sos_4factors_nonadd)
+
+#on age
+offensive_age_4factors_nonadd <- lm(ORtg ~`O_eFG%` + `O_TOV%`  + `ORB%` + `O_FT/FGA` + Age_Cat*`O_eFG%` + Age_Cat*`O_TOV%` + Age_Cat*`ORB%` + Age_Cat*`O_FT/FGA`, data = team_stats)
+summary(offensive_age_4factors_nonadd)
+defensive_age_4factors_nonadd <- lm(DRtg ~`D_eFG%` + `D_TOV%`  + `DRB%` + `D_FT/FGA` + Age_Cat*`D_eFG%` + Age_Cat*`D_TOV%` + Age_Cat*`DRB%` + Age_Cat*`D_FT/FGA`, data = team_stats)
+summary(defensive_age_4factors_nonadd)
+
+#on pace
+offensive_pace_4factors_nonadd <- lm(ORtg ~`O_eFG%` + `O_TOV%`  + `ORB%` + `O_FT/FGA` + Pace_Cat*`O_eFG%` + Pace_Cat*`O_TOV%` + Pace_Cat*`ORB%` + Pace_Cat*`O_FT/FGA`, data = team_stats)
+summary(offensive_pace_4factors_nonadd)
+defensive_pace_4factors_nonadd <- lm(DRtg ~`D_eFG%` + `D_TOV%`  + `DRB%` + `D_FT/FGA` + Pace_Cat*`D_eFG%` + Pace_Cat*`D_TOV%` + Pace_Cat*`DRB%` + Pace_Cat*`D_FT/FGA`, data = team_stats)
+summary(defensive_pace_4factors_nonadd)
+
+#the best model
+offensive_age_sos_OFT <- lm(ORtg ~`O_eFG%` + `O_TOV%`  + `ORB%` + `O_FT/FGA` + Age_Cat*`O_FT/FGA` + SOS_Cat*`O_FT/FGA`, data = team_stats)
+summary(offensive_age_sos_OFT)
+
+defensive_age_pace_efG_TOV <- lm(DRtg ~`D_eFG%` + `D_TOV%`  + `DRB%` + `D_FT/FGA` + Pace_Cat*`D_TOV%` + Age_Cat*`D_eFG%`, data = team_stats)
+summary(defensive_age_pace_efG_TOV)
+
+```
+
+```{r AIC/BIC test on cat_add_model}
+AIC(offensive_age_4factors_nonadd, offensive_pace_4factors_nonadd, offensive_sos_4factors_nonadd)
+BIC(offensive_age_4factors_nonadd, offensive_pace_4factors_nonadd, offensive_sos_4factors_nonadd)
+AIC(defensive_age_4factors_nonadd, defensive_pace_4factors_nonadd, defensive_sos_4factors_nonadd)
+BIC(defensive_age_4factors_nonadd, defensive_pace_4factors_nonadd, defensive_sos_4factors_nonadd)
+```
+
+# get the offensive_sos_4factors_nonadd
+# get the defensive_pace_4factors_nonadd
+
+
+```{r}
+summary(FactorsPlayoffModel)
+```
+
+```{r stepwise model}
+
+#backward and forward selection
+backAIC <- step(FactorsPlayoffModel,direction="backward")
+forwardAIC <- step(FactorsPlayoffModel,direction="forward")
+
+FactorsPlayoffModel2 <- update(FactorsPlayoffModel, .~.-ORB_Percent)
+summary(FactorsPlayoffModel2)
+FactorsPlayoffModel3 <- update(FactorsPlayoffModel2, .~.-`DRB%`)
+summary(FactorsPlayoffModel3)
+FactorsPlayoffModel4 <- update(FactorsPlayoffModel3, .~.-`D_FT/FGA`)
+summary(FactorsPlayoffModel4)
+#Based on the null deviance, the parameters in the models explain the data equally well.
+```
+
+```{r w/o O_RB%}
+
+NewFactorsPlayoffModelIntercept <- numeric(5)
+NewFactorsPlayoffModelInterceptSignificance <- numeric(5)
+NewFactorsPlayoffModelInterceptConfLow <- numeric(5)
+NewFactorsPlayoffModelInterceptConfHigh <- numeric(5)
+
+NewFactorsPlayoffModelOShootingSlope <- numeric(5)
+NewFactorsPlayoffModelOShootingSlopeSignificance <- numeric(5)
+NewFactorsPlayoffModelOShootingSlopeConfLow <- numeric(5)
+NewFactorsPlayoffModelOShootingSlopeConfHigh <- numeric(5)
+
+NewFactorsPlayoffModelOTurnoverSlope <- numeric(5)
+NewFactorsPlayoffModelOTurnoverSlopeSignificance <- numeric(5)
+NewFactorsPlayoffModelOTurnoverSlopeConfLow <- numeric(5)
+NewFactorsPlayoffModelOTurnoverSlopeConfHigh <- numeric(5)
+
+NewFactorsPlayoffModelOFreeThrowSlope <- numeric(5)
+NewFactorsPlayoffModelOFreeThrowSlopeSignificance <- numeric(5)
+NewFactorsPlayoffModelOFreeThrowSlopeConfLow <- numeric(5)
+NewFactorsPlayoffModelOFreeThrowSlopeConfHigh <- numeric(5)
+
+NewFactorsPlayoffModelDShootingSlope <- numeric(5)
+NewFactorsPlayoffModelDShootingSlopeSignificance <- numeric(5)
+NewFactorsPlayoffModelDShootingSlopeConfLow <- numeric(5)
+NewFactorsPlayoffModelDShootingSlopeConfHigh <- numeric(5)
+
+NewFactorsPlayoffModelDReboundingSlope <- numeric(5)
+NewFactorsPlayoffModelDReboundingSlopeSignificance <- numeric(5)
+NewFactorsPlayoffModelDReboundingSlopeConfLow <- numeric(5)
+NewFactorsPlayoffModelDReboundingSlopeConfHigh <- numeric(5)
+
+NewFactorsPlayoffModelDTurnoverSlope <- numeric(5)
+NewFactorsPlayoffModelDTurnoverSlopeSignificance <- numeric(5)
+NewFactorsPlayoffModelDTurnoverSlopeConfLow <- numeric(5)
+NewFactorsPlayoffModelDTurnoverSlopeConfHigh <- numeric(5)
+
+NewFactorsPlayoffModelDFreeThrowSlope <- numeric(5)
+NewFactorsPlayoffModelDFreeThrowSlopeSignificance <- numeric(5)
+NewFactorsPlayoffModelDFreeThrowSlopeConfLow <- numeric(5)
+NewFactorsPlayoffModelDFreeThrowSlopeConfHigh <- numeric(5)
+
+NewFactorsPlayoffModelPearson <- numeric(5)
+
+NewFactorsPlayoffModelConfusionZeroZero <- numeric(5)
+NewFactorsPlayoffModelConfusionOneZero <- numeric(5)
+NewFactorsPlayoffModelConfusionZeroOne <- numeric(5)
+NewFactorsPlayoffModelConfusionOneOne <- numeric(5)
+
+for(i in 1:5){ #an iteration for each CV fold
+  #Allocating test/training sets for each CV fold
+  test <- team_stats[cases[[i]], ]
+  training <- team_stats[-cases[[i]], ]
+  
+  NewFactorsPlayoffModel <- glm(formula = Playoff ~ O_eFG_Percent + O_TOV_Percent + O_FT_Per_100_FGA + `D_eFG%` + `DRB%` + `D_TOV%` + `D_FT/FGA`, family = binomial(link="logit"), data = training)
+  
+  NewFactorsPlayoffModelIntercept[i] <- NewFactorsPlayoffModel$coefficients[1]
+  NewFactorsPlayoffModelInterceptSignificance[i] <- summary(NewFactorsPlayoffModel)$coefficients[1, 4]
+  NewFactorsPlayoffModelOShootingSlope[i] <- NewFactorsPlayoffModel$coefficients[2]
+  NewFactorsPlayoffModelOShootingSlopeSignificance[i] <- summary(NewFactorsPlayoffModel)$coefficients[2, 4]
+  NewFactorsPlayoffModelOTurnoverSlope[i] <- NewFactorsPlayoffModel$coefficients[3]
+  NewFactorsPlayoffModelOTurnoverSlopeSignificance[i] <- summary(NewFactorsPlayoffModel)$coefficients[3, 4]
+  NewFactorsPlayoffModelOFreeThrowSlope[i] <- NewFactorsPlayoffModel$coefficients[4]
+  NewFactorsPlayoffModelOFreeThrowSlopeSignificance[i] <- summary(NewFactorsPlayoffModel)$coefficients[4, 4]
+  NewFactorsPlayoffModelDShootingSlope[i] <- NewFactorsPlayoffModel$coefficients[5]
+  NewFactorsPlayoffModelDShootingSlopeSignificance[i] <- summary(NewFactorsPlayoffModel)$coefficients[5, 4]
+  NewFactorsPlayoffModelDReboundingSlope[i] <- NewFactorsPlayoffModel$coefficients[6]
+  NewFactorsPlayoffModelDReboundingSlopeSignificance[i] <- summary(NewFactorsPlayoffModel)$coefficients[6, 4]
+  NewFactorsPlayoffModelDTurnoverSlope[i] <- NewFactorsPlayoffModel$coefficients[7]
+  NewFactorsPlayoffModelDTurnoverSlopeSignificance[i] <- summary(NewFactorsPlayoffModel)$coefficients[7, 4]
+  NewFactorsPlayoffModelDFreeThrowSlope[i] <- NewFactorsPlayoffModel$coefficients[8]
+  NewFactorsPlayoffModelDFreeThrowSlopeSignificance[i] <- summary(NewFactorsPlayoffModel)$coefficients[8, 4]
+  
+  NewFactorsPlayoffModelInterceptConfLow[i] <- round(exp(cbind(Estimate = coef(NewFactorsPlayoffModel), confint(NewFactorsPlayoffModel))), 2)[9]
+  NewFactorsPlayoffModelInterceptConfHigh[i] <- round(exp(cbind(Estimate = coef(NewFactorsPlayoffModel), confint(NewFactorsPlayoffModel))), 2)[17]
+  NewFactorsPlayoffModelOShootingSlopeConfLow[i] <- round(exp(cbind(Estimate = coef(NewFactorsPlayoffModel), confint(NewFactorsPlayoffModel))), 2)[10]
+  NewFactorsPlayoffModelOShootingSlopeConfHigh[i] <- round(exp(cbind(Estimate = coef(NewFactorsPlayoffModel), confint(NewFactorsPlayoffModel))), 2)[18]
+  NewFactorsPlayoffModelOTurnoverSlopeConfLow[i] <- round(exp(cbind(Estimate = coef(NewFactorsPlayoffModel), confint(NewFactorsPlayoffModel))), 2)[11]
+  NewFactorsPlayoffModelOTurnoverSlopeConfHigh[i] <- round(exp(cbind(Estimate = coef(NewFactorsPlayoffModel), confint(NewFactorsPlayoffModel))), 2)[19]
+  NewFactorsPlayoffModelOFreeThrowSlopeConfLow[i] <- round(exp(cbind(Estimate = coef(NewFactorsPlayoffModel), confint(NewFactorsPlayoffModel))), 2)[12]
+  NewFactorsPlayoffModelOFreeThrowSlopeConfHigh[i] <- round(exp(cbind(Estimate = coef(NewFactorsPlayoffModel), confint(NewFactorsPlayoffModel))), 2)[20]
+  NewFactorsPlayoffModelDShootingSlopeConfLow[i] <- round(exp(cbind(Estimate = coef(NewFactorsPlayoffModel), confint(NewFactorsPlayoffModel))), 2)[13]
+  NewFactorsPlayoffModelDShootingSlopeConfHigh[i] <- round(exp(cbind(Estimate = coef(NewFactorsPlayoffModel), confint(NewFactorsPlayoffModel))), 2)[21]
+  NewFactorsPlayoffModelDReboundingSlopeConfLow[i] <-  round(exp(cbind(Estimate = coef(NewFactorsPlayoffModel), confint(NewFactorsPlayoffModel))), 2)[14]
+  NewFactorsPlayoffModelDReboundingSlopeConfHigh[i] <-  round(exp(cbind(Estimate = coef(NewFactorsPlayoffModel), confint(NewFactorsPlayoffModel))), 2)[22]
+  NewFactorsPlayoffModelDTurnoverSlopeConfLow[i] <- round(exp(cbind(Estimate = coef(NewFactorsPlayoffModel), confint(NewFactorsPlayoffModel))), 2)[15]
+  NewFactorsPlayoffModelDTurnoverSlopeConfHigh[i] <- round(exp(cbind(Estimate = coef(NewFactorsPlayoffModel), confint(NewFactorsPlayoffModel))), 2)[23]
+  NewFactorsPlayoffModelDFreeThrowSlopeConfLow[i] <- round(exp(cbind(Estimate = coef(NewFactorsPlayoffModel), confint(NewFactorsPlayoffModel))), 2)[16]
+  NewFactorsPlayoffModelDFreeThrowSlopeConfHigh[i] <- round(exp(cbind(Estimate = coef(NewFactorsPlayoffModel), confint(NewFactorsPlayoffModel))), 2)[24]
+  
+  NewFactorsPlayoffModelPearson[i] <- round(sum(residuals(NewFactorsPlayoffModel, type = "pearson")^2), 3)
+
+  test$Prediction <- predict(NewFactorsPlayoffModel, test, type = "response")
+  test$Prediction <- ifelse(test$Prediction > .5, 1, 0)
+  
+  NewConfusion <- table(test$Prediction, test$Playoff)
+  
+  NewFactorsPlayoffModelConfusionZeroZero[i] <- NewConfusion[1]
+  NewFactorsPlayoffModelConfusionOneZero[i] <- NewConfusion[2]
+  NewFactorsPlayoffModelConfusionZeroOne[i] <- NewConfusion[3]
+  NewFactorsPlayoffModelConfusionOneOne[i] <- NewConfusion[4]
+  
+}
+
+print(paste("Confusion Zero/Zero", sum(NewFactorsPlayoffModelConfusionZeroZero)))
+print(paste("Confusion One/Zero", sum(NewFactorsPlayoffModelConfusionOneZero)))
+print(paste("Confusion Zero/One", sum(NewFactorsPlayoffModelConfusionZeroOne)))
+print(paste("Confusion One/One", sum(NewFactorsPlayoffModelConfusionOneOne)))
+
+print(paste("Intercept Value" ,mean(NewFactorsPlayoffModelIntercept)))
+print(paste("Exp(Intercept Value)", exp(mean(NewFactorsPlayoffModelIntercept))))
+print(paste("Intercept Significance", mean(NewFactorsPlayoffModelInterceptSignificance)))
+print(paste("Intercept Exp(Value) Low", mean(NewFactorsPlayoffModelInterceptConfLow)))
+print(paste("Intercept Exp(Value) High", mean(NewFactorsPlayoffModelInterceptConfHigh)))
+
+print(paste("Offense Shooting Slope Value", mean(NewFactorsPlayoffModelOShootingSlope)))
+print(paste("Offense Shooting Exp(Slope Value)", exp(mean(NewFactorsPlayoffModelOShootingSlope))))
+print(paste("Offense Shooting Slope Significance", mean(NewFactorsPlayoffModelOShootingSlopeSignificance)))
+print(paste("Offense Shooting Exp(Slope Value) Low", mean(NewFactorsPlayoffModelOShootingSlopeConfLow)))
+print(paste("Offense Shooting Exp(Slope Value) High", mean(NewFactorsPlayoffModelOShootingSlopeConfHigh)))
+
+print(paste("Offense Turnovers Slope Value", mean(NewFactorsPlayoffModelOTurnoverSlope)))
+print(paste("Offense Turnovers Exp(Slope Value)", exp(mean(NewFactorsPlayoffModelOTurnoverSlope))))
+print(paste("Offense Turnovers Slope Significance", mean(NewFactorsPlayoffModelOTurnoverSlopeSignificance)))
+print(paste("Offense Turnovers Exp(Slope Value) Low", mean(NewFactorsPlayoffModelOTurnoverSlopeConfLow)))
+print(paste("Offense Turnovers Exp(Slope Value) High", mean(NewFactorsPlayoffModelOTurnoverSlopeConfHigh)))
+
+print(paste("Offense Free Throw Slope Value", mean(NewFactorsPlayoffModelOFreeThrowSlope)))
+print(paste("Offense Free Throw Exp(Slope Value)", exp(mean(NewFactorsPlayoffModelOFreeThrowSlope))))
+print(paste("Offense Free Throw Slope Significance", mean(NewFactorsPlayoffModelOFreeThrowSlopeSignificance)))
+print(paste("Offense Free Throw Exp(Slope Value) Low", mean(NewFactorsPlayoffModelOFreeThrowSlopeConfLow)))
+print(paste("Offense Free Throw Exp(Slope Value) High", mean(NewFactorsPlayoffModelOFreeThrowSlopeConfHigh)))
+
+print(paste("Defense Shooting Slope Value", mean(NewFactorsPlayoffModelDShootingSlope)))
+print(paste("Defense Shooting Exp(Slope Value)", exp(mean(NewFactorsPlayoffModelDShootingSlope))))
+print(paste("Defense Shooting Slope Significance", mean(NewFactorsPlayoffModelDShootingSlopeSignificance)))
+print(paste("Defense Shooting Exp(Slope Value) Low", mean(NewFactorsPlayoffModelDShootingSlopeConfLow)))
+print(paste("Defense Shooting Exp(Slope Value) High", mean(NewFactorsPlayoffModelDShootingSlopeConfHigh)))
+
+print(paste("Defense Rebounding Slope Value", mean(NewFactorsPlayoffModelDReboundingSlope)))
+print(paste("Defense Rebounding Exp(Slope Value)", exp(mean(NewFactorsPlayoffModelDReboundingSlope))))
+print(paste("Defense Rebounding Slope Significance", mean(NewFactorsPlayoffModelDReboundingSlopeSignificance)))
+print(paste("Defense Rebounding Exp(Slope Value) Low", mean(NewFactorsPlayoffModelDReboundingSlopeConfLow)))
+print(paste("Defense Rebounding Exp(Slope Value) High", mean(NewFactorsPlayoffModelDReboundingSlopeConfHigh)))
+
+print(paste("Defense Turnovers Slope Value", mean(NewFactorsPlayoffModelDTurnoverSlope)))
+print(paste("Defense Turnovers Exp(Slope Value)", exp(mean(NewFactorsPlayoffModelDTurnoverSlope))))
+print(paste("Defense Turnovers Slope Significance", mean(NewFactorsPlayoffModelDTurnoverSlopeSignificance)))
+print(paste("Defense Turnovers Exp(Slope Value) Low", mean(NewFactorsPlayoffModelDTurnoverSlopeConfLow)))
+print(paste("Defense Turnovers Exp(Slope Value) High", mean(NewFactorsPlayoffModelDTurnoverSlopeConfHigh)))
+
+print(paste("Defense Free Throw Slope Value", mean(NewFactorsPlayoffModelDFreeThrowSlope)))
+print(paste("Defense Free Throw Exp(Slope Value)", exp(mean(NewFactorsPlayoffModelDFreeThrowSlope))))
+print(paste("Defense Free Throw Slope Significance", mean(NewFactorsPlayoffModelDFreeThrowSlopeSignificance)))
+print(paste("Defense Free Throw Exp(Slope Value) Low", mean(NewFactorsPlayoffModelDFreeThrowSlopeConfLow)))
+print(paste("Defense Free Throw Exp(Slope Value) High", mean(NewFactorsPlayoffModelDFreeThrowSlopeConfHigh)))
+
+print(paste("Perason X^2", mean(NewFactorsPlayoffModelPearson)))
+print(paste("Critical Value", qchisq(.95, 112)))
+
+```
+
+```{r w/o D_RB%}
+
+NewFactorsPlayoffModelIntercept1 <- numeric(5)
+NewFactorsPlayoffModelInterceptSignificance1 <- numeric(5)
+NewFactorsPlayoffModelOShootingSlope1 <- numeric(5)
+NewFactorsPlayoffModelOShootingSlopeSignificance1 <- numeric(5)
+NewFactorsPlayoffModelOTurnoverSlope1 <- numeric(5)
+NewFactorsPlayoffModelOTurnoverSlopeSignificance1 <- numeric(5)
+NewFactorsPlayoffModelOFreeThrowSlope1 <- numeric(5)
+NewFactorsPlayoffModelOFreeThrowSlopeSignificance1 <- numeric(5)
+NewFactorsPlayoffModelDShootingSlope1 <- numeric(5)
+NewFactorsPlayoffModelDShootingSlopeSignificance1 <- numeric(5)
+NewFactorsPlayoffModelDTurnoverSlope1 <- numeric(5)
+NewFactorsPlayoffModelDTurnoverSlopeSignificance1 <- numeric(5)
+NewFactorsPlayoffModelDFreeThrowSlope1 <- numeric(5)
+NewFactorsPlayoffModelDFreeThrowSlopeSignificance1 <- numeric(5)
+
+NewFactorsPlayoffModelConfusionZeroZero1 <- numeric(5)
+NewFactorsPlayoffModelConfusionOneZero1 <- numeric(5)
+NewFactorsPlayoffModelConfusionZeroOne1 <- numeric(5)
+NewFactorsPlayoffModelConfusionOneOne1 <- numeric(5)
+
+for(i in 1:5){ #an iteration for each CV fold
+  #Allocating test/training sets for each CV fold
+  test <- team_stats[cases[[i]], ]
+  training <- team_stats[-cases[[i]], ]
+  
+  NewFactorsPlayoffModel1 <- glm(formula = Playoff ~ O_eFG_Percent + O_TOV_Percent + O_FT_Per_100_FGA + `D_eFG%` + `D_TOV%` + `D_FT/FGA`, family = binomial(link="logit"), data = training)
+  
+  NewFactorsPlayoffModelIntercept1[i] <- NewFactorsPlayoffModel1$coefficients[1]
+  NewFactorsPlayoffModelInterceptSignificance1[i] <- summary(NewFactorsPlayoffModel1)$coefficients[1, 4]
+  NewFactorsPlayoffModelOShootingSlope1[i] <- NewFactorsPlayoffModel1$coefficients[2]
+  NewFactorsPlayoffModelOShootingSlopeSignificance1[i] <- summary(NewFactorsPlayoffModel1)$coefficients[2, 4]
+  NewFactorsPlayoffModelOTurnoverSlope1[i] <- NewFactorsPlayoffModel1$coefficients[3]
+  NewFactorsPlayoffModelOTurnoverSlopeSignificance1[i] <- summary(NewFactorsPlayoffModel1)$coefficients[3, 4]
+  NewFactorsPlayoffModelOFreeThrowSlope1[i] <- NewFactorsPlayoffModel1$coefficients[4]
+  NewFactorsPlayoffModelOFreeThrowSlopeSignificance1[i] <- summary(NewFactorsPlayoffModel1)$coefficients[4, 4]
+  NewFactorsPlayoffModelDShootingSlope1[i] <- NewFactorsPlayoffModel1$coefficients[5]
+  NewFactorsPlayoffModelDShootingSlopeSignificance1[i] <- summary(NewFactorsPlayoffModel1)$coefficients[5, 4]
+  NewFactorsPlayoffModelDTurnoverSlope1[i] <- NewFactorsPlayoffModel1$coefficients[6]
+  NewFactorsPlayoffModelDTurnoverSlopeSignificance1[i] <- summary(NewFactorsPlayoffModel1)$coefficients[6, 4]
+  NewFactorsPlayoffModelDFreeThrowSlope1[i] <- NewFactorsPlayoffModel1$coefficients[7]
+  NewFactorsPlayoffModelDFreeThrowSlopeSignificance1[i] <- summary(NewFactorsPlayoffModel1)$coefficients[7, 4]
+  
+  
+  test$Prediction1 <- predict(NewFactorsPlayoffModel1, test, type = "response")
+  test$Prediction1 <- ifelse(test$Prediction1 > .5, 1, 0)
+  
+  NewConfusion1 <- table(test$Prediction1, test$Playoff)
+  
+  NewFactorsPlayoffModelConfusionZeroZero1[i] <- NewConfusion1[1]
+  NewFactorsPlayoffModelConfusionOneZero1[i] <- NewConfusion1[2]
+  NewFactorsPlayoffModelConfusionZeroOne1[i] <- NewConfusion1[3]
+  NewFactorsPlayoffModelConfusionOneOne1[i] <- NewConfusion1[4]
+
+  
+}
+
+print(paste("Confusion Zero/Zero", sum(NewFactorsPlayoffModelConfusionZeroZero1)))
+print(paste("Confusion One/Zero", sum(NewFactorsPlayoffModelConfusionOneZero1)))
+print(paste("Confusion Zero/One", sum(NewFactorsPlayoffModelConfusionZeroOne1)))
+print(paste("Confusion One/One", sum(NewFactorsPlayoffModelConfusionOneOne1)))
+
+print(paste("Intercept Value" ,mean(NewFactorsPlayoffModelIntercept1)))
+print(paste("Exp(Intercept Value)", exp(mean(NewFactorsPlayoffModelIntercept1))))
+print(paste("Intercept Significance", mean(NewFactorsPlayoffModelInterceptSignificance1)))
+print(paste("Offense Shooting Slope Value", mean(NewFactorsPlayoffModelOShootingSlope1)))
+print(paste("Offense Shooting Exp(Slope Value)", exp(mean(NewFactorsPlayoffModelOShootingSlope1))))
+print(paste("Offense Shooting Slope Significance", mean(NewFactorsPlayoffModelOShootingSlopeSignificance1)))
+print(paste("Offense Turnovers Slope Value", mean(NewFactorsPlayoffModelOTurnoverSlope1)))
+print(paste("Offense Turnovers Exp(Slope Value)", exp(mean(NewFactorsPlayoffModelOTurnoverSlope1))))
+print(paste("Offense Turnovers Slope Significance", mean(NewFactorsPlayoffModelOTurnoverSlopeSignificance1)))
+print(paste("Offense Free Throw Slope Value", mean(NewFactorsPlayoffModelOFreeThrowSlope1)))
+print(paste("Offense Free Throw Exp(Slope Value)", exp(mean(NewFactorsPlayoffModelOFreeThrowSlope1))))
+print(paste("Offense Free Throw Slope Significance", mean(NewFactorsPlayoffModelOFreeThrowSlopeSignificance1)))
+print(paste("Defense Shooting Slope Value", mean(NewFactorsPlayoffModelDShootingSlope1)))
+print(paste("Defense Shooting Exp(Slope Value)", exp(mean(NewFactorsPlayoffModelDShootingSlope1))))
+print(paste("Defense Shooting Slope Significance", mean(NewFactorsPlayoffModelDShootingSlopeSignificance1)))
+print(paste("Defense Turnovers Slope Value", mean(NewFactorsPlayoffModelDTurnoverSlope1)))
+print(paste("Defense Turnovers Exp(Slope Value)", exp(mean(NewFactorsPlayoffModelDTurnoverSlope1))))
+print(paste("Defense Turnovers Slope Significance", mean(NewFactorsPlayoffModelDTurnoverSlopeSignificance1)))
+print(paste("Defense Free Throw Slope Value", mean(NewFactorsPlayoffModelDFreeThrowSlope1)))
+print(paste("Defense Free Throw Exp(Slope Value)", exp(mean(NewFactorsPlayoffModelDFreeThrowSlope1))))
+print(paste("Defense Free Throw Slope Significance", mean(NewFactorsPlayoffModelDFreeThrowSlopeSignificance1)))
+
+```
+
+```{r no Freethrow}
+NewFactorsPlayoffModelIntercept2 <- numeric(5)
+NewFactorsPlayoffModelInterceptSignificance2 <- numeric(5)
+NewFactorsPlayoffModelOShootingSlope2 <- numeric(5)
+NewFactorsPlayoffModelOShootingSlopeSignificance2 <- numeric(5)
+NewFactorsPlayoffModelOTurnoverSlope2 <- numeric(5)
+NewFactorsPlayoffModelOTurnoverSlopeSignificance2 <- numeric(5)
+NewFactorsPlayoffModelOFreeThrowSlope2 <- numeric(5)
+NewFactorsPlayoffModelOFreeThrowSlopeSignificance2 <- numeric(5)
+NewFactorsPlayoffModelDShootingSlope2 <- numeric(5)
+NewFactorsPlayoffModelDShootingSlopeSignificance2 <- numeric(5)
+NewFactorsPlayoffModelDTurnoverSlope2 <- numeric(5)
+NewFactorsPlayoffModelDTurnoverSlopeSignificance2 <- numeric(5)
+
+NewFactorsPlayoffModelConfusionZeroZero2 <- numeric(5)
+NewFactorsPlayoffModelConfusionOneZero2 <- numeric(5)
+NewFactorsPlayoffModelConfusionZeroOne2 <- numeric(5)
+NewFactorsPlayoffModelConfusionOneOne2 <- numeric(5)
+
+for(i in 1:5){ #an iteration for each CV fold
+  #Allocating test/training sets for each CV fold
+  test <- team_stats[cases[[i]], ]
+  training <- team_stats[-cases[[i]], ]
+  
+  NewFactorsPlayoffModel2 <- glm(formula = Playoff ~ O_eFG_Percent + O_TOV_Percent + O_FT_Per_100_FGA + `D_eFG%` + `D_TOV%`, family = binomial(link="logit"), data = training)
+  
+  NewFactorsPlayoffModelIntercept2[i] <- NewFactorsPlayoffModel2$coefficients[1]
+  NewFactorsPlayoffModelInterceptSignificance2[i] <- summary(NewFactorsPlayoffModel2)$coefficients[1, 4]
+  NewFactorsPlayoffModelOShootingSlope2[i] <- NewFactorsPlayoffModel2$coefficients[2]
+  NewFactorsPlayoffModelOShootingSlopeSignificance2[i] <- summary(NewFactorsPlayoffModel2)$coefficients[2, 4]
+  NewFactorsPlayoffModelOTurnoverSlope2[i] <- NewFactorsPlayoffModel2$coefficients[3]
+  NewFactorsPlayoffModelOTurnoverSlopeSignificance2[i] <- summary(NewFactorsPlayoffModel2)$coefficients[3, 4]
+  NewFactorsPlayoffModelOFreeThrowSlope2[i] <- NewFactorsPlayoffModel2$coefficients[4]
+  NewFactorsPlayoffModelOFreeThrowSlopeSignificance2[i] <- summary(NewFactorsPlayoffModel2)$coefficients[4, 4]
+  NewFactorsPlayoffModelDShootingSlope2[i] <- NewFactorsPlayoffModel2$coefficients[5]
+  NewFactorsPlayoffModelDShootingSlopeSignificance2[i] <- summary(NewFactorsPlayoffModel2)$coefficients[5, 4]
+  NewFactorsPlayoffModelDTurnoverSlope2[i] <- NewFactorsPlayoffModel2$coefficients[6]
+  NewFactorsPlayoffModelDTurnoverSlopeSignificance2[i] <- summary(NewFactorsPlayoffModel2)$coefficients[6, 4]
+  
+  test$prediction2 <- predict(NewFactorsPlayoffModel2, test, type="response")
+  test$prediction2 <- ifelse(test$prediction2 >0.5, 1, 0)
+
+  NewConfusion2 <- table(test$prediction2, test$Playoff)
+  
+  NewFactorsPlayoffModelConfusionZeroZero2[i] <- NewConfusion2[1]
+  NewFactorsPlayoffModelConfusionOneZero2[i] <- NewConfusion2[2]
+  NewFactorsPlayoffModelConfusionZeroOne2[i] <- NewConfusion2[3]
+  NewFactorsPlayoffModelConfusionOneOne2[i] <- NewConfusion2[4]
+
+}
+
+print(paste("Confusion Zero/Zero", sum(NewFactorsPlayoffModelConfusionZeroZero2)))
+print(paste("Confusion One/Zero", sum(NewFactorsPlayoffModelConfusionOneZero2)))
+print(paste("Confusion Zero/One", sum(NewFactorsPlayoffModelConfusionZeroOne2)))
+print(paste("Confusion One/One", sum(NewFactorsPlayoffModelConfusionOneOne2)))
+
+print(paste("Intercept Value" ,mean(NewFactorsPlayoffModelIntercept2)))
+print(paste("Exp(Intercept Value)", exp(mean(NewFactorsPlayoffModelIntercept2))))
+print(paste("Intercept Significance", mean(NewFactorsPlayoffModelInterceptSignificance2)))
+print(paste("Offense Shooting Slope Value", mean(NewFactorsPlayoffModelOShootingSlope2)))
+print(paste("Offense Shooting Exp(Slope Value)", exp(mean(NewFactorsPlayoffModelOShootingSlope2))))
+print(paste("Offense Shooting Slope Significance", mean(NewFactorsPlayoffModelOShootingSlopeSignificance2)))
+print(paste("Offense Turnovers Slope Value", mean(NewFactorsPlayoffModelOTurnoverSlope2)))
+print(paste("Offense Turnovers Exp(Slope Value)", exp(mean(NewFactorsPlayoffModelOTurnoverSlope2))))
+print(paste("Offense Turnovers Slope Significance", mean(NewFactorsPlayoffModelOTurnoverSlopeSignificance2)))
+print(paste("Offense Free Throw Slope Value", mean(NewFactorsPlayoffModelOFreeThrowSlope2)))
+print(paste("Offense Free Throw Exp(Slope Value)", exp(mean(NewFactorsPlayoffModelOFreeThrowSlope2))))
+print(paste("Offense Free Throw Slope Significance", mean(NewFactorsPlayoffModelOFreeThrowSlopeSignificance2)))
+print(paste("Defense Shooting Slope Value", mean(NewFactorsPlayoffModelDShootingSlope2)))
+print(paste("Defense Shooting Exp(Slope Value)", exp(mean(NewFactorsPlayoffModelDShootingSlope2))))
+print(paste("Defense Shooting Slope Significance", mean(NewFactorsPlayoffModelDShootingSlopeSignificance2)))
+print(paste("Defense Turnovers Slope Value", mean(NewFactorsPlayoffModelDTurnoverSlope2)))
+print(paste("Defense Turnovers Exp(Slope Value)", exp(mean(NewFactorsPlayoffModelDTurnoverSlope2))))
+print(paste("Defense Turnovers Slope Significance", mean(NewFactorsPlayoffModelDTurnoverSlopeSignificance2)))`
+
+``` 
+
